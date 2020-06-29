@@ -1,0 +1,119 @@
+<?php
+
+
+namespace App\Command;
+
+use App\Entity\Evenement;
+use Doctrine\DBAL\DBALException;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use SimpleXMLElement;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use \Doctrine\ORM\EntityManager;
+use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Validator\Constraints\DateTime;
+
+class fluxRssEvenementCommand extends Command
+{
+
+    protected static $defaultName = 'app:rssEvenement';
+
+
+    // ...
+    // ...
+    private $entityManager;
+
+    public function __construct(EntityManagerInterface $entityManager)
+    {
+        parent::__construct();
+        $this->entityManager = $entityManager;
+    }
+
+
+    /**
+     * @CronJob("*\/5 * * * *")
+     * Will be executed every 5 minutes
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return
+     * @throws DBALException
+     * @throws \Exception
+     */
+    protected function execute(InputInterface $input, OutputInterface $output)
+    {
+
+        /***
+         * Partie Suppression des données
+         *
+         *
+        $doctrineTruncate = $this->entityManager->getConnection();
+        $platform   = $doctrineTruncate->getDatabasePlatform();
+        $doctrineTruncate->executeUpdate($platform->getTruncateTableSQL('article', true ));
+        $doctrineTruncate->executeUpdate($platform->getTruncateTableSQL('evenement', true ));
+        ***/
+
+        $doctrine = $this->entityManager;
+
+        // Partie Evenement
+
+        $urlEvenement = "https://www.terredevins.com/evenements/feed";
+        $xmlEvenement = new SimpleXMLElement($urlEvenement, null, true);
+        $nsEvenement = $xmlEvenement->getNamespaces(true);
+        $fluxrssEvenement = simplexml_load_file($urlEvenement);
+        $itemsEvenement = $fluxrssEvenement->channel->item;
+
+        foreach($itemsEvenement as $item ){
+
+            $title = $item->title;
+            $link = $item->link;
+            $comments = $item->comments;
+            $pubDate = $item->pubDate;
+            $pubDateFinal = date('Y-m-d',strtotime($pubDate));
+            $dc = $item->children($nsEvenement['dc']);
+            $guid = $item->guid;
+            $description = $item->description;
+            $content = $item->children($nsEvenement['content']);
+            $wfw = $item->children($nsEvenement['wfw']);
+            $slash = $item->children($nsEvenement['slash']);
+
+            $evenementUpdate = $doctrine
+                ->getRepository(Evenement::class)
+                ->findEvenementByTitle($title->__toString());
+
+            if (($evenementUpdate === False)) {
+                $evenement = new Evenement();
+
+                $evenement->setTitle($title);
+                $evenement->setLink($link);
+                $evenement->setComments($comments);
+                $evenement->setPubDate(new \DateTime($pubDateFinal));
+                $evenement->setCreator($dc);
+                $evenement->setGuid($guid);
+                $evenement->setDescription($description);
+                $evenement->setContent($content);
+                $evenement->setCommentRss($wfw);
+                $evenement->setCommentsSlash($slash);
+
+                // tells Doctrine you want to (eventually) save the Article (no queries yet)
+                $doctrine->persist($evenement);
+                // actually executes the queries (i.e. the INSERT query)
+                $doctrine->flush();
+                $output->writeln('Récupération des Evénements !');
+
+                // actually executes the queries (i.e. the INSERT query)
+                $doctrine->flush();
+                $output->writeln('Récupération des Articles et leurs Categorys !');
+
+            }
+        }
+
+        return 0;
+    }
+
+
+}
+

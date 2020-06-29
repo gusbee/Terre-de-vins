@@ -1,0 +1,81 @@
+<?php
+
+namespace App\Controller;
+
+use App\Entity\Article;
+use App\Entity\Category;
+use App\Entity\Evenement;
+use App\Entity\Oenotourisme;
+use SimpleXMLElement;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Annotation\Route;
+
+class OenotourismeController extends AbstractController
+{
+
+    /**
+     * @Route("/AllOenotourisme", name="AllOenotourisme")
+     */
+
+    public function findAllOenotourisme()
+    {
+
+        $oenotourismes = $this->getDoctrine()
+            ->getRepository(Oenotourisme::class)
+            ->findAll();
+
+        if (!$oenotourismes) {
+            // cause the 404 page not found to be displayed
+            throw $this->createNotFoundException();
+        }
+
+        return $this->render('rss/Oenotourisme/Oenotourismes.html.twig', array(
+            'oenotourismes' => $oenotourismes
+        ));
+    }
+
+    /**
+     * @Route("/Oenotourisme/{$title}", name="Oenotourisme")
+     * @param $title
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function findOneOenotourisme($title)
+    {
+
+        $oenotourismes = $this->getDoctrine()
+            ->getRepository(Oenotourisme::class)
+            ->findoneBy(array('title'=>$title));
+
+        if (!$oenotourismes) {
+            // cause the 404 page not found to be displayed
+            throw $this->createNotFoundException();
+        }
+
+        return $this->render('rss/Oenotourisme/Oenotourisme.html.twig', array(
+            'oenotourismes' => $oenotourismes
+        ));
+    }
+
+/*
+    public function rss()
+    {
+        $rss = new DOMDocument();
+        $rss->load('https://www.terredevins.com/feed');
+        $encoded = array();
+        $limit=50;
+        foreach ($rss->getElementsByTagName('encoded') as $node)
+        {
+            $item = $node->getElementsByTagName('img')->item(0)->value;
+            array_push($encoded, $item);
+        }
+        for($x=0;$x<$limit;$x++) {
+            echo 'IMG -> '.$encoded[$x].'</br></br>';
+        }
+        return $this->render('rss/rss.html.twig', array(
+            'rss' => $rss->channel->item,
+        ));
+    }
+    */
+}
+

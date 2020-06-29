@@ -1,0 +1,10 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Flux_rss{% endblock %}
+
+{% block body %}
+
+    {% for item in rssEvenement %}
+        <li>{{ item.title|raw  }}</li>
+    {% endfor %}
+{% endblock %}

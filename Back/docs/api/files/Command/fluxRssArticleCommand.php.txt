@@ -1,0 +1,129 @@
+<?php
+
+
+namespace App\Command;
+
+use App\Entity\Article;
+use App\Entity\Category;
+use Doctrine\DBAL\DBALException;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use SimpleXMLElement;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use \Doctrine\ORM\EntityManager;
+use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Validator\Constraints\DateTime;
+
+/**
+ *
+ * Description du Répository de l'Oenotourisme :
+ *
+ * Aucune méthode défini
+ *
+ * Class fluxRssArticleCommand
+ * @package App\Command
+ */
+class fluxRssArticleCommand extends Command
+{
+
+    protected static $defaultName = 'app:rssArticleCategory';
+
+
+    // ...
+    // ...
+    private $entityManager;
+
+    public function __construct(EntityManagerInterface $entityManager)
+    {
+        parent::__construct();
+        $this->entityManager = $entityManager;
+    }
+
+
+    /**
+     * @CronJob("*\/5 * * * *")
+     * Will be executed every 5 minutes
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return
+     * @throws DBALException
+     * @throws \Exception
+     */
+    protected function execute(InputInterface $input, OutputInterface $output)
+    {
+
+        /***
+         * Partie Suppression des données
+        ***/
+
+        $doctrine = $this->entityManager;
+
+        // Partie Category -Article
+
+        $urlHome = "https://www.terredevins.com/feed";
+        $xmlHome = new SimpleXMLElement($urlHome, null, true);
+        $nsHome = $xmlHome->getNamespaces(true);
+        $fluxRssHome = simplexml_load_file($urlHome);
+        $itemsHome = $fluxRssHome->channel->item;
+
+        foreach($itemsHome as $item ) {
+
+            $title = $item->title;
+            $link = $item->link;
+            $comments = $item->comments;
+            $pubDate = $item->pubDate;
+            $pubDateFinal = date('Y-m-d', strtotime($pubDate));
+            $dc = $item->children($nsHome['dc']);
+            $categories = array();
+            foreach ($item->category as $category) {
+                $categories[] = $doctrine
+                    ->getRepository(Category::class)
+                    ->findCategoryByName($category->__toString());
+            }
+            $guid = $item->guid;
+            $description = $item->description;
+            $content = $item->children($nsHome['content']);
+            $wfw = $item->children($nsHome['wfw']);
+            $slash = $item->children($nsHome['slash']);
+
+            $articleUpdate = $doctrine
+                ->getRepository(Article::class)
+                ->findArticleByTitle($title->__toString());
+
+            if (($articleUpdate === False)) {
+
+                $article = new Article();
+                foreach ($categories as $category) {
+                    $article->addCategory($category);
+                }
+
+                $article->setTitle($title);
+                $article->setLink($link);
+                $article->setComments($comments);
+                $article->setPubDate(new \DateTime($pubDateFinal));
+                $article->setCreator($dc);
+                $article->setGuid($guid);
+                $article->setDescription($description);
+                $article->setContent($content);
+                $article->setCommentRss($wfw);
+                $article->setCommentsSlash($slash);
+
+                // tells Doctrine you want to (eventually) save the Article (no queries yet)
+                $doctrine->persist($category);
+                $doctrine->persist($article);
+                // actually executes the queries (i.e. the INSERT query)
+                $doctrine->flush();
+                $output->writeln('Récupération des Articles et leurs Categorys !');
+            }
+        }
+
+        return 0;
+    }
+
+
+}
+

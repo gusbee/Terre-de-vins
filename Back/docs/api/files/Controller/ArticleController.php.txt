@@ -1,0 +1,89 @@
+<?php
+
+namespace App\Controller;
+
+use App\Entity\Article;
+use App\Entity\Category;
+use App\Repository\ArticleRepository;
+use Doctrine\DBAL\DBALException;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Serializer\Normalizer\NormalizableInterface;
+
+class ArticleController extends AbstractController
+{
+
+    private $entityManager;
+
+    public function __construct(EntityManagerInterface $entityManager)
+    {
+        $this->entityManager = $entityManager;
+    }
+
+    /**
+     * @Route("/articles", name="articles", methods={"GET"})
+     * @param ArticleRepository $articleRepository
+     * @return Response
+     */
+    public function findAllArticle(ArticleRepository $articleRepository)
+    {
+
+        $articles = $articleRepository->findAll();
+        $data = $this->get('serializer')->serialize($articles, 'json',['groups' => ['article']]);
+
+        $response = new Response($data);
+        $response->headers->set('Content-Type', 'application/json');
+
+        return $response;
+    }
+
+    /**
+     * @Route("/article/{id}", name="article", methods={"GET"})
+     * @param Article $article
+     * @return Response
+     */
+    public function findOneArticle(Article $article)
+    {
+        $data = $this->get('serializer')->serialize($article, 'json',['groups' => ['article']]);
+
+        $response = new Response($data);
+        $response->headers->set('Content-Type', 'application/json');
+
+        return $response;
+    }
+
+    /**
+     * @Route("/category/{id}/article", name="articlecategory", methods={"GET"}, requirements={"id":"\d+"})
+     * @param Article $article
+     * @param Category $category
+     * @param $id
+     * @return Response
+     * @throws DBALException
+     *
+     *  Description :
+     * lkfjgoijrtgpojrtpogjrt
+     */
+    public function findArticlesbyCategory(Article $article,Category $category,$id)
+    {
+        //
+        $rawSql = "SELECT article.* FROM `category`
+        LEFT JOIN `article_category` ON `article_category`.`category_id` = `category`.`id`
+        LEFT JOIN `article` ON `article_category`.`article_id` = `article`.`id`
+        WHERE category.id = $id ";
+        $stmt = $this->entityManager->getConnection()->prepare($rawSql);
+        $stmt->execute([]);
+
+        $resultat = $stmt->fetchAll();
+        $data = $this->get('serializer')->serialize($resultat, 'json');
+
+        $response = new Response($data);
+        $response->headers->set('Content-Type', 'application/json');
+
+        return $response;
+    }
+
+}
+

@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Controller;
+
+
+use App\Entity\Evenement;
+use App\Repository\EvenementRepository;
+use JMS\Serializer\SerializerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+class EvenementController extends AbstractController
+{
+
+    /**
+     * @Route("/evenements", name="evenements", methods={"GET"})
+     * @param EvenementRepository $evenementRepository
+     * @return Response
+     */
+    public function findEvenements(EvenementRepository $evenementRepository)
+    {
+
+        $evenements = $evenementRepository->findAll();
+        $data = $this->get('serializer')->serialize($evenements, 'json',['groups' => ['evenement']]);
+
+        $response = new Response($data);
+        $response->headers->set('Content-Type', 'application/json');
+
+        return $response;
+    }
+
+    /**
+     * @Route("/evenement/{id}", name="evenement", methods={"GET"})
+     * @param Evenement $evenement
+     * @return Response
+     */
+    public function findOneEvenement(Evenement $evenement)
+    {
+        $data = $this->get('serializer')->serialize($evenement, 'json',['groups' => ['evenement']]);
+
+        $response = new Response($data);
+        $response->headers->set('Content-Type', 'application/json');
+
+        return $response;
+    }
+
+}
+

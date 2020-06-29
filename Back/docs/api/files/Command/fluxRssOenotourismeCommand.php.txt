@@ -1,0 +1,110 @@
+<?php
+
+
+namespace App\Command;
+
+use App\Entity\Oenotourisme;
+use Doctrine\DBAL\DBALException;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use SimpleXMLElement;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use \Doctrine\ORM\EntityManager;
+use Doctrine\DBAL\Driver\Connection;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Validator\Constraints\DateTime;
+
+class fluxRssOenotourismeCommand extends Command
+{
+
+    protected static $defaultName = 'app:rssOenotourisme';
+
+
+    // ...
+    // ...
+    private $entityManager;
+
+    public function __construct(EntityManagerInterface $entityManager)
+    {
+        parent::__construct();
+        $this->entityManager = $entityManager;
+    }
+
+
+    /**
+     * @CronJob("*\/5 * * * *")
+     * Will be executed every 5 minutes
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return
+     * @throws DBALException
+     * @throws \Exception
+     */
+    protected function execute(InputInterface $input, OutputInterface $output)
+    {
+
+        /***
+         * Partie Suppression des données
+         *
+         *
+        $doctrineTruncate = $this->entityManager->getConnection();
+        $platform   = $doctrineTruncate->getDatabasePlatform();
+        $doctrineTruncate->executeUpdate($platform->getTruncateTableSQL('article', true ));
+        $doctrineTruncate->executeUpdate($platform->getTruncateTableSQL('evenement', true ));
+        ***/
+
+        $doctrine = $this->entityManager;
+
+        // Partie Oenotourisme
+
+        $urlOenotourisme = "https://www.terredevins.com/oenotourisme/feed";
+        $xmlOenotourisme = new SimpleXMLElement($urlOenotourisme, null, true);
+        $nsOenotourisme = $xmlOenotourisme->getNamespaces(true);
+        $fluxRssOenotourisme = simplexml_load_file($urlOenotourisme);
+        $itemsOenotourisme = $fluxRssOenotourisme->channel->item;
+
+        foreach($itemsOenotourisme as $item ){
+
+            $title = $item->title;
+            $link = $item->link;
+            $comments = $item->comments;
+            $pubDate = $item->pubDate;
+            $pubDateFinal = date('Y-m-d',strtotime($pubDate));
+            $dc = $item->children($nsOenotourisme['dc']);
+            $guid = $item->guid;
+            $description = $item->description;
+            $content = $item->children($nsOenotourisme['content']);
+            $wfw = $item->children($nsOenotourisme['wfw']);
+            $slash = $item->children($nsOenotourisme['slash']);
+
+
+            $oenotourisme = new Oenotourisme();
+
+            $oenotourisme->setTitle($title);
+            $oenotourisme->setLink($link);
+            $oenotourisme->setComments($comments);
+            $oenotourisme->setPubDate(new \DateTime($pubDateFinal));
+            $oenotourisme->setCreator($dc);
+            $oenotourisme->setGuid($guid);
+            $oenotourisme->setDescription($description);
+            $oenotourisme->setContent($content);
+            $oenotourisme->setCommentRss($wfw);
+            $oenotourisme->setCommentsSlash($slash);
+
+            // tells Doctrine you want to (eventually) save the Article (no queries yet)
+            $doctrine->persist($oenotourisme);
+            // actually executes the queries (i.e. the INSERT query)
+            $doctrine->flush();
+            $output->writeln('Récupération des Oenotourisme !');
+
+        }
+
+        return 0;
+    }
+
+
+}
+

@@ -1,0 +1,23 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Flux_rss{% endblock %}
+
+{% block body %}
+
+    {% for item in rssHome %}
+        <li>{{ item.title|raw  }}</li>
+        <li>{{ item.link|raw  }}</li>
+        <li>{{ item.comments|raw  }}</li>
+        <li>{{ item.pubDate|date|raw  }}</li>
+        <li>{{ item.children(ns['dc'])|raw  }}</li>
+        {% for item in item.category %}
+            <li>{{item}}</li>
+        {% endfor %}
+        <li>{{ item.guid|raw  }}</li>
+        <li>{{ item.description|raw  }}</li>
+        <li>{{ item.children(ns['content'])|raw }}</li>
+        <li>{{ item.children(ns['wfw'])|raw  }}</li>
+        <li>{{ item.children(ns['slash'])|raw  }}</li>
+        <li>{{ item.comments|raw  }}</li>
+    {% endfor %}
+{% endblock %}

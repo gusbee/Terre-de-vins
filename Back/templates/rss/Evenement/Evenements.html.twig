@@ -1,0 +1,20 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Flux_rss{% endblock %}
+
+{% block body %}
+
+    {% for item in rssEvenements %}
+        <h1>{{ item.title|raw  }}</h1>
+        <li>{{ item.link|raw  }}</li>
+        <li>{{ item.comments|raw  }}</li>
+        <li>{{ item.pubDate|date|raw  }}</li>
+        <li>{{ item.creator|raw  }}</li>
+        <li>{{ item.guid|raw  }}</li>
+        <li>{{ item.description|raw  }}</li>
+        <li>{{ item.content|raw }}</li>
+        <li>{{ item.commentRss|raw  }}</li>
+        <li>{{ item.commentsSlash|raw  }}</li>
+        <li>{{ item.comments|raw  }}</li>
+    {% endfor %}
+{% endblock %}

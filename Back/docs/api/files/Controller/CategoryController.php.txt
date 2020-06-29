@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Controller;
+
+
+use App\Entity\Category;
+use App\Repository\CategoryRepository;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+class CategoryController extends AbstractController
+{
+
+    /**
+     * @Route("/categories", name="categories", methods={"GET"})
+     * @param CategoryRepository $categoryRepository
+     * @return Response
+     */
+    public function findCategory(CategoryRepository $categoryRepository)
+    {
+
+        $categories = $categoryRepository->findAll();
+        $data = $this->get('serializer')->serialize($categories, 'json',['groups' => ['category']]);
+
+        $response = new Response($data);
+        $response->headers->set('Content-Type', 'application/json');
+
+        return $response;
+    }
+
+    /**
+     * @Route("/category/{id}", name="category", methods={"GET"})
+     * @param Category $category
+     * @return Response
+     */
+    public function findOneArticle(Category $category)
+    {
+        $data = $this->get('serializer')->serialize($category, 'json',['groups' => ['category']]);
+
+        $response = new Response($data);
+        $response->headers->set('Content-Type', 'application/json');
+
+        return $response;
+    }
+}
+
